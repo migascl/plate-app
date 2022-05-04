@@ -26,7 +26,7 @@ function AuthToken({route, navigation}){
                         `${baseUrl}/authenticate-token`,
                         {
                             password: `${passText}`,
-                            token: `${item.token}`,   
+                            token: `${item.token}`,
                         },
                         {
                             headers: {
@@ -93,10 +93,10 @@ function Home({navigation}){
         getNotifs();
     }, []);
 
-    return( 
+    return(
         <SafeAreaView style={styles.container}>
             <Button
-                title="Create Token" 
+                title="Create Token"
                 onPress={() => {
                     axios.post(
                         `${baseUrl}/create-token`,
@@ -105,7 +105,7 @@ function Home({navigation}){
                         }
                     )
                 }}
-            />  
+            />
             {isLoading ? <ActivityIndicator/> : (
                 <FlatList
                     ListHeaderComponent={
@@ -120,8 +120,8 @@ function Home({navigation}){
                             onRefresh={onRefresh}
                         />
                     }
-                />   
-            )}  
+                />
+            )}
         </SafeAreaView>
     )
 }
@@ -166,7 +166,7 @@ function SignUp({navigation}){
 function SignIn({navigation}) {
     const [emailText, onChangeEmailText] = useState('miguelleirosa@gmail.com');
     const [passText, onChangePassText] = useState('migascl');
-    
+
     return (
     <View style={styles.container}>
         <Text>Sign In</Text>
