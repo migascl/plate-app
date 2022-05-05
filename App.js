@@ -10,7 +10,9 @@ const baseUrl = 'https://plate-notifications.herokuapp.com' // Notification API 
 
 // Home Screen
 function Home({route, navigation}){
+
     const userToken = route.params.item
+
     // Refresh timers
     const [refreshing, setRefreshing] = useState(false);
     const onRefresh = React.useCallback(() => {
