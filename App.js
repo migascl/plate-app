@@ -29,7 +29,7 @@ function Home({route, navigation}){
     const showModal = () => setModalVisible(true);
     const hideModal = () => setModalVisible(false);
 
-    const [passText, setPassText] = useState('migascl');
+    const [passText, setPassText] = useState('');
 
     const Item = ({ item }) => (
         <TouchableRipple onPress={ () => {
@@ -217,8 +217,8 @@ function SignUp({navigation}) {
 
 // Signin Screen
 function SignIn({navigation}) {
-    const [emailText, setEmailText]  = useState('miguelleirosa@gmail.com');
-    const [passText, setPassText] = useState('migascl');
+    const [emailText, setEmailText]  = useState('');
+    const [passText, setPassText] = useState('');
 
     const [errorMsg, setErrorMsg] = useState('');
     const [snackVisible, setSnackVisible] = useState(false);
