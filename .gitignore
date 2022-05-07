@@ -57,3 +57,4 @@ yarn.lock
 /.vscode/
 yarn.lock
 App_bk.js
+/.expo-shared/

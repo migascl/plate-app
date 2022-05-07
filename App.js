@@ -306,27 +306,3 @@ export default function App() {
         </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    scrollView: {
-        flex: 1,
-        backgroundColor: 'white',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    item: {
-        backgroundColor: 'grey',
-        padding: 20,
-        marginVertical: 8,
-        marginHorizontal: 16,
-    },
-    text: {
-        fontSize: 17,
-    },
-});
