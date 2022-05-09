@@ -16,6 +16,7 @@ function Home({route, navigation}){
     // Refresh timers
     const [refreshing, setRefreshing] = useState(false);
     const onRefresh = React.useCallback(() => {
+        setPassText("")
         setRefreshing(true);
         getNotifs().then(() => setRefreshing(false));
     }, []);
