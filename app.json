@@ -7,6 +7,13 @@
       "**/*"
     ],
     "description": "",
-    "githubUrl": "https://github.com/migascl/plate-app"
+    "githubUrl": "https://github.com/migascl/plate-app",
+    "android": {
+      "package": "com.migascl.plateapp"
+    }
+  },
+  "android": {
+    "package": "com.gpr.plate_app",
+    "versionCode": 1
   }
 }
