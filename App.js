@@ -1,309 +1,357 @@
 import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { RefreshControl, View, Text, FlatList, StyleSheet} from 'react-native';
-import { TextInput, Button, Portal, Provider, Snackbar, List, TouchableRipple, ActivityIndicator, Modal } from 'react-native-paper';
+import {NavigationContainer} from '@react-navigation/native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import {
+  RefreshControl,
+  View,
+  Text,
+  FlatList,
+  SafeAreaView,
+  StyleSheet
+} from 'react-native';
+import {
+  TextInput,
+  Button,
+  Portal,
+  Provider,
+  Snackbar,
+  List,
+  TouchableRipple,
+  ActivityIndicator,
+  Modal,
+  IconButton, Caption
+} from 'react-native-paper';
 import { StatusBar } from 'expo-status-bar';
 import axios from "axios";
 
 const baseUrl = 'https://plate-notifications.herokuapp.com' // Notification API URL
 
-// Home Screen
-function Home({route, navigation}){
+function History({route, navigation}) {
 
-    const userToken = route.params.item
+  const userToken = route.params.userToken
 
-    // Refresh timers
-    const [refreshing, setRefreshing] = useState(false);
-    const onRefresh = React.useCallback(() => {
-        setPassText("")
-        setRefreshing(true);
-        getNotifs().then(() => setRefreshing(false));
-    }, []);
-
-    const [isLoading, setLoading] = useState(false);
-    const [data, setData] = useState([]);
-
-    const [currentToken, setCurrentToken] = useState();
-
-    const [modalVisible, setModalVisible] = useState(false);
-    const showModal = () => setModalVisible(true);
-    const hideModal = () => setModalVisible(false);
-
-    const [passText, setPassText] = useState('');
-
-    const Item = ({ item }) => (
-        <TouchableRipple onPress={ () => {
-            setCurrentToken(item)
-            showModal()
-        }}>
-            <List.Item
-                title={item.message}
-                description={item.created_at}
-                left={props => <List.Icon {...props} icon="alert" />}
-            />
-        </TouchableRipple>
-    );
-
-    const getNotifs = async () => {
-        try {
-            setLoading(true);
-            const response = await axios.get(
-                `${baseUrl}/notifications`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${userToken}`
-                    }
-                }
-            )
-            setData(response.data)
-        } catch (error) {
-            console.error(error)
-            navigation.navigate("SignIn")
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    useEffect(() => {
-        getNotifs();
-    }, []);
-
-    return(
-        <View>
-            {isLoading ? <ActivityIndicator/> : (
-                <FlatList
-                    data = {data}
-                    renderItem = {Item}
-                    keyExtractor = {item => item.id}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={onRefresh}
-                        />
-                    }
-                />
-            )}
-            <Provider>
-                <Portal>
-                    <Modal
-                        visible={modalVisible}
-                        onDismiss={ () => {
-                            onRefresh()
-                            hideModal()
-                        }}
-                        contentContainerStyle={{backgroundColor: 'white', padding: 20, margin: 20}}
-                    >
-                        <Text>Type password to confirm:</Text>
-                        <TextInput
-                            label="Password"
-                            secureTextEntry={true}
-                            value={passText}
-                            onChangeText={passText => setPassText(passText)}
-                        />
-                        <Button
-                            mode="contained"
-                            onPress={() => {
-                                axios.post(
-                                    `${baseUrl}/authenticate-token`,
-                                    {
-                                        password: `${passText}`,
-                                        token: `${currentToken.token}`,
-                                    },
-                                    {
-                                        headers: {
-                                            Authorization: `Bearer ${userToken}`,
-                                        }
-                                    }
-                                ).then( // If successful
-                                    function (response) {
-                                        onRefresh()
-                                        hideModal()
-                                    }
-                                ).catch( // If fails
-                                    function (error) {
-                                        console.log(error)
-                                    }
-                                )
-                            }}
-                        >
-                            Confirm
-                        </Button>
-                    </Modal>
-                </Portal>
-            </Provider>
-        </View>
-    )
+  return(
+    <View>
+      <Text>{userToken}</Text>
+    </View>
+  )
 }
 
-// Signup Screen
-function SignUp({navigation}) {
-    const [emailText, setEmailText]  = useState('');
-    const [passText, setPassText] = useState('');
-    const [confirmText, setConfirmText] = useState('');
+function Pending({route, navigation}) {
 
-    const [isLoading, setLoading] = useState(false);
+  const userToken = route.params.userToken
 
-    const [errorMsg, setErrorMsg] = useState('');
-    const [snackVisible, setSnackVisible] = useState(false);
-    const onToggleSnackBar = () => setSnackVisible(!snackVisible);
-    const onDismissSnackBar = () => setSnackVisible(false);
+//---------------------------- States ----------------------------//
 
-    return (
-        <View style={{flex: 1, justifyContent: 'center', alignSelf: 'center', width: '75%'}}>
-            <TextInput
-                label="Email"
-                value={emailText}
-                onChangeText={emailText => setEmailText(emailText)}
-            />
-            <TextInput
-                label="Password"
-                secureTextEntry={true}
-                value={passText}
-                onChangeText={passText => setPassText(passText)}
-            />
-            <TextInput
-                label="Confirm password"
-                secureTextEntry={true}
-                value={confirmText}
-                onChangeText={confirmText => setConfirmText(confirmText)}
-            />
-            <Button 
-                mode="contained"
-                loading={isLoading}
-                disabled={isLoading}
-                onPress={() => {
-                    if(passText === confirmText){
-                        setLoading(true)
-                        axios.post(
-                            `${baseUrl}/signup`,
-                            {
-                                email: `${emailText}`,
-                                password: `${passText}`
-                            }
-                        ).then( // If successful
-                            function (response) {
-                                navigation.navigate("SignIn")
-                                setLoading(false)
-                            }
-                        ).catch( // If fails
-                            function (error) {
-                                console.log(error)
-                                setErrorMsg(`${error}`)
-                                onToggleSnackBar()
-                                setLoading(false)
-                            }
-                        )
-                    } else {
-                        setErrorMsg("Make sure passwords are identical!")
-                        onToggleSnackBar()
-                        console.log("ERROR: Password confirmation failed")
-                    }
-                }}
-            >
-                Sign Up
-            </Button>
-            <Snackbar
-                visible={snackVisible}
-                onDismiss={() => {
-                    onDismissSnackBar()
-                    setErrorMsg("")
-                }}
-            >
-               {errorMsg}
-            </Snackbar>
-        </View>
-    );
+  // Refresh state
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = React.useCallback(() => {
+    setPassText("")
+    setRefreshing(true);
+    getNotifs().then(() => setRefreshing(false));
+  }, []);
+
+  // Loading state
+  const [isLoading, setLoading] = useState(false);
+
+  // Data state
+  const [data, setData] = useState([]);
+  const pendingNotifs = () => {
+    let notifs_ = []
+    data.forEach((value) => {
+      let diff = (Date.now() - new Date(`${value.created_at}`))
+      diff = Math.floor((diff/1000)/60)
+      if(diff <= 15){
+        notifs_.push(value)
+      }
+    })
+    return notifs_
+  }
+  const historyNotifs = () => {
+    let notifs_ = []
+    data.forEach((value) => {
+      let diff = (Date.now() - new Date(`${value.created_at}`))
+      diff = Math.floor((diff/1000)/60)
+      if(diff > 15){
+        notifs_.push(value)
+      }
+    })
+    return notifs_
+  }
+
+  // Authentication state
+  const [modalVisible, setModalVisible] = useState(false);
+  const showModal = () => setModalVisible(true);
+  const hideModal = () => setModalVisible(false);
+  // Password field state
+  const [passText, setPassText] = useState('');
+
+  // Selected notification token
+  const [currentToken, setCurrentToken] = useState();
+
+//---------------------------- Coroutines ----------------------------//
+
+  // Retrieve notifications
+  const getNotifs = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(
+        `${baseUrl}/notifications`,
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`
+          }
+        }
+      )
+      setData(response.data.reverse())
+    } catch (error) {
+      console.error(error)
+      navigation.navigate("SignIn")
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    getNotifs();
+  }, []);
+
+//---------------------------- Renders ----------------------------//
+
+  // Notification list item
+  const PendingItem = ({item}) => (
+    <TouchableRipple onPress={() => {
+      setCurrentToken(item)
+      showModal()
+    }}>
+      <List.Item
+        title={item.message}
+        description={item.created_at}
+        left={props => <List.Icon {...props} icon="alert"/>}
+      />
+    </TouchableRipple>
+  );
+  const HistoryItem = ({item}) => (
+    <List.Item
+      title={item.message}
+      description={item.created_at}
+    />
+  );
+
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <IconButton icon="refresh" onPress={() => {navigation.navigate({name: "Home", params: {item: userToken}})}} />
+      ),
+    });
+  }, [navigation]);
+
+  return (
+    <Provider>
+      {isLoading ? <ActivityIndicator/> : (
+        <List.Section>
+          { pendingNotifs().length > 0 ? (
+            <List.Subheader>Pending Notifications</List.Subheader>
+          ) : (
+            <List.Item title="No pending notifications"/>
+          ) }
+          <FlatList
+            data={pendingNotifs()}
+            renderItem={PendingItem}
+            keyExtractor={item => item.id}/>
+
+          <List.Subheader>History</List.Subheader>
+          <FlatList
+            data={historyNotifs()}
+            renderItem={HistoryItem}
+            keyExtractor={item => item.id}
+          />
+
+        </List.Section>
+      )}
+      <Portal>
+        <Modal
+          visible={modalVisible}
+          onDismiss={() => {
+            onRefresh()
+            hideModal()
+          }}
+          contentContainerStyle={{backgroundColor: 'white', padding: 20, margin: 20}}
+        >
+          <Text>Type password to confirm:</Text>
+          <TextInput
+            label="Password"
+            secureTextEntry={true}
+            value={passText}
+            onChangeText={passText => setPassText(passText)}
+          />
+          <Button
+            mode="contained"
+            onPress={() => {
+              axios.post(
+                `${baseUrl}/authenticate-token`,
+                {
+                  password: `${passText}`,
+                  token: `${currentToken.token}`,
+                },
+                {
+                  headers: {
+                    Authorization: `Bearer ${userToken}`,
+                  }
+                }
+              ).then( // If successful
+                function (response) {
+                  onRefresh()
+                  hideModal()
+                }
+              ).catch( // If fails
+                function (error) {
+                  console.log(error)
+                }
+              )
+            }}
+          >
+            Confirm
+          </Button>
+        </Modal>
+      </Portal>
+    </Provider>
+  )
+}
+
+// Home Screen
+function Home({route, navigation}) {
+
+  // User's token
+  const userToken = route.params.item
+
+  const Tab = createMaterialTopTabNavigator();
+
+  return(
+    <Tab.Navigator>
+      <Tab.Screen name="Pending" component={Pending} initialParams={{userToken: userToken}} />
+      <Tab.Screen name="History" component={History} initialParams={{userToken: userToken}}/>
+    </Tab.Navigator>
+  )
+
 }
 
 // Signin Screen
-function SignIn({navigation}) {
-    const [emailText, setEmailText]  = useState('');
-    const [passText, setPassText] = useState('');
+function SignIn({ navigation }) {
+  const [emailText, setEmailText] = useState('miguelleirosa@gmail.com');
+  const [passText, setPassText] = useState('migascl');
 
-    const [errorMsg, setErrorMsg] = useState('');
-    const [snackVisible, setSnackVisible] = useState(false);
-    const onToggleSnackBar = () => setSnackVisible(!snackVisible);
-    const onDismissSnackBar = () => setSnackVisible(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [snackVisible, setSnackVisible] = useState(false);
+  const onToggleSnackBar = () => setSnackVisible(!snackVisible);
+  const onDismissSnackBar = () => setSnackVisible(false);
 
-    const [isLoading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const showModal = () => setModalVisible(true);
+  const hideModal = () => setModalVisible(false);
 
-    return (
-        <View style={{flex: 1, justifyContent: 'center', alignSelf: 'center', width: '75%'}}>
-            <View>
-                <TextInput
-                    label="Email"
-                    value={emailText}
-                    onChangeText={emailText => setEmailText(emailText)}
-                />
-                <TextInput
-                    label="Password"
-                    secureTextEntry={true}
-                    value={passText}
-                    onChangeText={passText => setPassText(passText)}
-                />
-                <Button
-                    mode="contained"
-                    loading={isLoading}
-                    disabled={isLoading}
-                    onPress={() => {
-                        setLoading(true)
-                        axios.post(
-                            `${baseUrl}/signin`,
-                            {
-                                email: `${emailText}`,
-                                password: `${passText}`
-                            }
-                        ).then( // If successful
-                            function (response) {
-                                navigation.navigate({name: "Home", params: {item: response.data.token.token}})
-                                setLoading(false)
-                            }
-                        ).catch( // If fails
-                            function (error) {
-                                console.log(error)
-                                setErrorMsg(`${error}`)
-                                onToggleSnackBar()
-                                setLoading(false)
-                            }
-                        )
-                    }}
-                >
-                    Log in
-                </Button>
-                <Text
-                    onPress = {() => {
-                        navigation.navigate("SignUp")
-                    }}
-                >
-                    Sign Up
-                </Text>
-                <Snackbar
-                    visible={snackVisible}
-                    onDismiss={() => {
-                        onDismissSnackBar()
-                        setErrorMsg("")
-                    }}
-                >
-                    {errorMsg}
-                </Snackbar>
-            </View>
-        </View>
-    );
-}
+  const [isLoading, setLoading] = useState(false);
 
-// Start screen
-export default function App() {
-
-    const Stack = createNativeStackNavigator();
-    return (
-        <NavigationContainer>
-            <Stack.Navigator>
-                <Stack.Screen name="SignIn" component={SignIn} />
-                <Stack.Screen name="SignUp" component={SignUp} />
-                <Stack.Screen name="Home" component={Home} />
-                </Stack.Navigator>
-            <StatusBar style="auto" />
-        </NavigationContainer>
+  return (
+    <View style={{flex: 1}}>
+      <View style={{flex: 1, justifyContent: 'center', alignSelf: 'center', width: '75%'}}>
+        <TextInput
+          label="Email"
+          value={emailText}
+          onChangeText={emailText => setEmailText(emailText)}
+        />
+        <TextInput
+          label="Password"
+          secureTextEntry={true}
+          value={passText}
+          onChangeText={passText => setPassText(passText)}
+        />
+        <Button
+          mode="contained"
+          loading={isLoading}
+          disabled={isLoading}
+          onPress={() => {
+            setLoading(true)
+            axios.post(
+              `${baseUrl}/signin`,
+              {
+                email: `${emailText}`,
+                password: `${passText}`
+              }
+            ).then( // If successful
+              function (response) {
+                navigation.navigate({name: "Home", params: {item: response.data.token.token}})
+                setLoading(false)
+              }
+            ).catch( // If fails
+              function (error) {
+                console.log(error)
+                setErrorMsg(`${error}`)
+                onToggleSnackBar()
+                setLoading(false)
+              }
+            )
+          }}
+        >
+          Log in
+        </Button>
+        <Text
+          onPress={() => {
+            showModal()
+          }}
+        >
+          I don't have an account.
+        </Text>
+        <Snackbar
+          visible={snackVisible}
+          onDismiss={() => {
+            onDismissSnackBar()
+            setErrorMsg("")
+          }}
+        >
+          {errorMsg}
+        </Snackbar>
+      </View>
+      <Provider>
+        <Portal>
+          <Modal
+            visible={modalVisible}
+            onDismiss={() => {
+              hideModal()
+            }}
+            contentContainerStyle={{backgroundColor: 'white', padding: 20, margin: 20}}
+          >
+            <Text>Access the admin website to create an account.</Text>
+          </Modal>
+        </Portal>
+      </Provider>
+    </View>
   );
 }
+
+// Base
+export default function App() {
+
+  const Stack = createNativeStackNavigator();
+
+  return (
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen name="SignIn" component={SignIn} options={{ title: 'Plate Recognizer' }}/>
+        <Stack.Screen
+          name="Home"
+          component={Home}
+          options={{
+            title: "Notifications",
+            headerShadowVisible: false
+        }}/>
+      </Stack.Navigator>
+      <StatusBar style="auto"/>
+    </NavigationContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+
+})

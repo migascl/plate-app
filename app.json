@@ -2,7 +2,7 @@
   "expo": {
     "name": "plate-app",
     "slug": "plate-app",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -11,9 +11,5 @@
     "android": {
       "package": "com.migascl.plateapp"
     }
-  },
-  "android": {
-    "package": "com.gpr.plate_app",
-    "versionCode": 1
   }
 }
