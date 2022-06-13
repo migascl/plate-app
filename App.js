@@ -28,7 +28,9 @@ import {
   TouchableRipple,
   ActivityIndicator,
   Modal,
-  IconButton, Caption
+  IconButton,
+  Dialog,
+  Caption
 } from 'react-native-paper';
 import { StatusBar } from 'expo-status-bar';
 import axios from "axios";
@@ -38,7 +40,26 @@ const baseUrl = 'https://plate-notifications.herokuapp.com' // Notification API 
 // Prefilled variables for testing
 const testEmail = ''
 const testPassword = ''
-const testPlate = ''
+const testPlate = 'H391DVSA'
+
+function refreshHome({navigation, route}) {
+  getNotifs(route.params.userToken).then( r => {
+    navigation.dispatch(
+      CommonActions.reset({
+        routes: [
+          {
+            name: 'Pending',
+            params: {userToken: route.params.userToken, data: r},
+          },
+          {
+            name: 'History',
+            params: {userToken: route.params.userToken, data: r},
+          },
+        ],
+      })
+    )
+  })
+}
 
 const getNotifs = async (userToken) => {
   try {
@@ -61,20 +82,6 @@ const getNotifs = async (userToken) => {
 
 function History({route, navigation}) {
 
-  React.useEffect(() => {
-      console.log("history change")
-    },
-    [route.params.data]
-  )
-
-  React.useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', (e) => {
-      console.log('history focus')
-    });
-
-    return unsubscribe;
-  }, [navigation]);
-
   const data = () => {
     let notifs_ = []
     route.params.data.forEach((value) => {
@@ -89,9 +96,8 @@ function History({route, navigation}) {
 
   const Item = ({item}) => (
       <List.Item
-        title={item.message}
-        description={item.created_at}
-        left={props => <List.Icon {...props} icon="alert"/>}
+        title={`License plate ${item.message}`}
+        description={ `${new Date(Date.parse(item.created_at)).toUTCString()}`}
       />
   );
 
@@ -108,6 +114,11 @@ function History({route, navigation}) {
 
 function Pending({navigation, route}) {
 
+  const [errorMsg, setErrorMsg] = useState(''); // Snack message state
+  const [snackVisible, setSnackVisible] = useState(false); // Snack visibility state
+  const onToggleSnackBar = () => setSnackVisible(!snackVisible); // OnToggleSnack function
+  const onDismissSnackBar = () => setSnackVisible(false); // OnDismissSnack function
+
   // Authentication state
   const [modalVisible, setModalVisible] = useState(false);
   const showModal = () => setModalVisible(true);
@@ -116,21 +127,9 @@ function Pending({navigation, route}) {
   const [passText, setPassText] = useState('');
 
   // Selected notification token
-  const [currentToken, setCurrentToken] = useState();
+  const [currentToken, setCurrentToken] = useState([]);
 
-  React.useEffect(() => {
-      console.log("pending change")
-    },
-    [route.params.data]
-  )
-
-  React.useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', (e) => {
-      console.log('pending focus')
-    });
-
-    return unsubscribe;
-  }, [navigation]);
+  const [isLoading, setLoading] = useState(false); // Loading state
 
   const data = () => {
     let notifs_ = []
@@ -147,75 +146,108 @@ function Pending({navigation, route}) {
   const Item = ({item}) => (
     <TouchableRipple
       onPress={() => {
-        setCurrentToken(item.token)
+        setCurrentToken(item)
         showModal()
       }}
     >
     <List.Item
-      title={item.message}
-      description={item.created_at}
-      left={props => <List.Icon {...props} icon="alert"/>}
+      title={`${new Date(Date.parse(item.created_at)).toUTCString()}`}
+      description={"Tap to authenticate."}
+      left={props => <List.Icon {...props} icon="alert" color="#6200EE"/>}
     />
     </TouchableRipple>
   );
 
   return (
     <Provider>
+      { data().length <= 0 ? (
+        <List.Item title="No pending notifications"/>
+      ) : (
+        <></>
+      ) }
       <FlatList
         data={data()}
         renderItem={Item}
         keyExtractor={item => item.id}
       />
       <Portal>
-        <Modal
+        <Dialog
           visible={modalVisible}
           onDismiss={() => {
             hideModal()
           }}
           contentContainerStyle={{backgroundColor: 'white', padding: 20, margin: 20}}
         >
-          <Text>Type password to confirm:</Text>
-          <TextInput
-            label="Password"
-            secureTextEntry={true}
-            value={passText}
-            onChangeText={passText => setPassText(passText)}
-          />
-          <Button
-            mode="contained"
-            onPress={() => {
-              console.log("attempting auth:")
-              console.log("route.params.userToken: " + route.params.userToken)
-              console.log("passText: " + passText)
-              console.log("currentToken: " + currentToken)
+          <Dialog.Content>
+            <Caption>License plate: {currentToken.message}</Caption>
+            <Caption>Detected at: {new Date(Date.parse(currentToken.created_at)).toUTCString()}</Caption>
+            <Text
+              style={{
+                marginVertical: 6,
+              }}
+            >Type password to confirm:</Text>
+            <TextInput
+              label="Password"
+              style={{
+                marginVertical: 6,
+              }}
+              secureTextEntry={true}
+              value={passText}
+              onChangeText={passText => setPassText(passText)}
+            />
+            <Button
+              mode="contained"
+              style={{
+                marginVertical: 6,
+              }}
+              loading={isLoading}
+              disabled={isLoading}
+              onPress={() => {
+                console.log("attempting auth:")
+                console.log("route.params.userToken: " + route.params.userToken)
+                console.log("passText: " + passText)
+                console.log("currentToken: " + currentToken)
 
-              axios.post(
-                `${baseUrl}/authenticate-token`,
-                {
-                  password: `${passText}`,
-                  token: `${currentToken}`,
-                },
-                {
-                  headers: {
-                    Authorization: `Bearer ${route.params.userToken}`,
+                axios.post(
+                  `${baseUrl}/authenticate-token`,
+                  {
+                    password: `${passText}`,
+                    token: `${currentToken.token}`,
+                  },
+                  {
+                    headers: {
+                      Authorization: `Bearer ${route.params.userToken}`,
+                    }
                   }
-                }
-              ).then( // If successful
-                function (response) {
-
-                }
-              ).catch( // If fails
-                function (error) {
-                  console.log(error)
-                }
-              )
-              setPassText("")
-              hideModal()
-            }}
-          >
-            Confirm
-          </Button>
-        </Modal>
+                ).then( // If successful
+                  function (response) {
+                    refreshHome({navigation, route})
+                    hideModal()
+                  }
+                ).catch( // If fails
+                  function (error) {
+                    console.log(error)
+                    setErrorMsg(`An error has occurred. (Error code: ${error.response.status})`)
+                    onToggleSnackBar()
+                  }
+                )
+                setLoading(false)
+                setPassText("")
+              }}
+            >
+              Confirm
+            </Button>
+          </Dialog.Content>
+        </Dialog>
+        <Snackbar
+          visible={snackVisible}
+          onDismiss={() => {
+            onDismissSnackBar()
+            setErrorMsg("")
+          }}
+        >
+          {errorMsg}
+        </Snackbar>
       </Portal>
     </Provider>
   )
@@ -225,8 +257,6 @@ function Pending({navigation, route}) {
 function Home({route, navigation}) {
 
   console.log("home")
-
-  const [data, setData] = useState([]);
 
   React.useEffect(() => {
       navigation.addListener('beforeRemove', (e) => {
@@ -260,24 +290,7 @@ function Home({route, navigation}) {
           <IconButton
             icon="refresh"
             onPress={() => {
-              console.log("refresh")
-              getNotifs(route.params.userToken).then( r => {
-                  navigation.dispatch(
-                    CommonActions.reset({
-                      routes: [
-                        {
-                          name: 'Pending',
-                          params: {userToken: route.params.userToken, data: r},
-                        },
-                        {
-                          name: 'History',
-                          params: {userToken: route.params.userToken, data: r},
-                        },
-                      ],
-                    })
-                  )
-                }
-              )
+              refreshHome({navigation, route})
             }}
           />
           <IconButton icon="plus" onPress={() => {
@@ -305,66 +318,82 @@ function Home({route, navigation}) {
   const Tab = createMaterialTopTabNavigator();
 
   return(
-    <Tab.Navigator
-      screenOptions={{
-        tabBarIndicatorStyle: { backgroundColor: '#6200EE' },
-      }}
-    >
-      <Tab.Screen
-        name="Pending"
-        component={Pending}
+    <>
+      <Tab.Navigator
         screenOptions={{
-          unmountOnBlur: true,
-          lazy: false
+          tabBarIndicatorStyle: { backgroundColor: '#6200EE' },
         }}
-        initialParams={{userToken: route.params.userToken, data: route.params.data}}
-      />
-      <Tab.Screen
-        name="History"
-        component={History}
-        screenOptions={{
-          unmountOnBlur: true,
-          lazy: false
-        }}
-        initialParams={{userToken: route.params.userToken, data: route.params.data}}
-      />
-    </Tab.Navigator>
+      >
+        <Tab.Screen
+          name="Pending"
+          component={Pending}
+          screenOptions={{
+            unmountOnBlur: true,
+            lazy: false
+          }}
+          initialParams={{userToken: route.params.userToken, data: route.params.data}}
+        />
+        <Tab.Screen
+          name="History"
+          component={History}
+          screenOptions={{
+            unmountOnBlur: true,
+            lazy: false
+          }}
+          initialParams={{userToken: route.params.userToken, data: route.params.data}}
+        />
+      </Tab.Navigator>
+    </>
   )
 
 }
 
 // Signin Screen
 function SignIn({ navigation }) {
-  const [emailText, setEmailText] = useState('');
-  const [passText, setPassText] = useState('');
 
-  const [errorMsg, setErrorMsg] = useState('');
-  const [snackVisible, setSnackVisible] = useState(false);
-  const onToggleSnackBar = () => setSnackVisible(!snackVisible);
-  const onDismissSnackBar = () => setSnackVisible(false);
+  const [emailText, setEmailText] = useState(''); // Email field state
+  const [passText, setPassText] = useState(''); // Password field state
 
-  const [modalVisible, setModalVisible] = useState(false);
-  const showModal = () => setModalVisible(true);
-  const hideModal = () => setModalVisible(false);
+  const [errorMsg, setErrorMsg] = useState(''); // Snack message state
+  const [snackVisible, setSnackVisible] = useState(false); // Snack visibility state
+  const onToggleSnackBar = () => setSnackVisible(!snackVisible); // OnToggleSnack function
+  const onDismissSnackBar = () => setSnackVisible(false); // OnDismissSnack function
 
-  const [isLoading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false); // Modal visibility state
+  const showModal = () => setModalVisible(true); // Show modal function
+  const hideModal = () => setModalVisible(false); // Hide modal function
+
+  const [isLoading, setLoading] = useState(false); // Loading state
 
   return (
-    <View style={{flex: 1}}>
-      <View style={{flex: 1, justifyContent: 'center', alignSelf: 'center', width: '75%'}}>
+    <SafeAreaView style={{
+      flex: 1,
+    }}>
+      <View style={{
+        padding: 24,
+      }}>
         <TextInput
           label="Email"
           value={emailText}
           onChangeText={emailText => setEmailText(emailText)}
+          style={{
+            marginVertical: 6,
+          }}
         />
         <TextInput
           label="Password"
           secureTextEntry={true}
           value={passText}
           onChangeText={passText => setPassText(passText)}
+          style={{
+            marginVertical: 6,
+          }}
         />
         <Button
           mode="contained"
+          style={{
+            marginVertical: 12,
+          }}
           loading={isLoading}
           disabled={isLoading}
           onPress={() => {
@@ -377,15 +406,22 @@ function SignIn({ navigation }) {
               }
             ).then( // If successful
               function (response) {
+                // Retrieve notifications from user token and open notification page with retrieved data
                 getNotifs(response.data.token.token).then( r =>
-                  navigation.navigate({name: "Home", params: {userToken: response.data.token.token, data: r}})
+                  navigation.navigate({
+                    name: "Home",
+                    params: {
+                      userToken: response.data.token.token,
+                      data: r
+                    }
+                  })
                 )
                 setLoading(false)
               }
             ).catch( // If fails
               function (error) {
                 console.log(error)
-                setErrorMsg(`${error}`)
+                setErrorMsg(`An error has occurred, check your credentials. \n(Error code: ${error.response.status})`)
                 onToggleSnackBar()
                 setLoading(false)
               }
@@ -401,30 +437,33 @@ function SignIn({ navigation }) {
         >
           I don't have an account.
         </Text>
-        <Snackbar
-          visible={snackVisible}
-          onDismiss={() => {
-            onDismissSnackBar()
-            setErrorMsg("")
-          }}
-        >
-          {errorMsg}
-        </Snackbar>
       </View>
+      <Snackbar
+        visible={snackVisible}
+        onDismiss={() => {
+          onDismissSnackBar()
+          setErrorMsg("")
+        }}
+      >
+        {errorMsg}
+      </Snackbar>
       <Provider>
         <Portal>
-          <Modal
+          <Dialog
             visible={modalVisible}
             onDismiss={() => {
               hideModal()
             }}
             contentContainerStyle={{backgroundColor: 'white', padding: 20, margin: 20}}
           >
-            <Text>Access the admin website to create an account.</Text>
-          </Modal>
+            <Dialog.Content>
+              <Text>Access the admin website to create an account:</Text>
+              <Text>plate-administrator.herokuapp.com</Text>
+            </Dialog.Content>
+          </Dialog>
         </Portal>
       </Provider>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -460,7 +499,3 @@ export default function App() {
     </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-
-})
