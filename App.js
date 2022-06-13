@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import {NavigationContainer} from '@react-navigation/native';
+import {
+  NavigationContainer,
+  useFocusEffect,
+  CommonActions,
+  getFocusedRouteNameFromRoute,
+  useNavigationState,
+  useRoute
+} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import {
@@ -8,7 +15,8 @@ import {
   Text,
   FlatList,
   SafeAreaView,
-  StyleSheet
+  StyleSheet,
+  Alert
 } from 'react-native';
 import {
   TextInput,
@@ -27,58 +35,78 @@ import axios from "axios";
 
 const baseUrl = 'https://plate-notifications.herokuapp.com' // Notification API URL
 
+// Prefilled variables for testing
+const testEmail = ''
+const testPassword = ''
+const testPlate = ''
+
+const getNotifs = async (userToken) => {
+  try {
+    console.log("try fetch")
+    const response = await axios.get(
+      `${baseUrl}/notifications`,
+      {
+        headers: {
+          Authorization: `Bearer ${userToken}`
+        }
+      }
+    )
+    return(response.data.reverse())
+  } catch (error) {
+    console.error(error)
+  } finally {
+    console.log("finally fetch")
+  }
+}
+
 function History({route, navigation}) {
 
-  const userToken = route.params.userToken
+  React.useEffect(() => {
+      console.log("history change")
+    },
+    [route.params.data]
+  )
 
-  return(
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', (e) => {
+      console.log('history focus')
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  const data = () => {
+    let notifs_ = []
+    route.params.data.forEach((value) => {
+      let diff = (Date.now() - new Date(`${value.created_at}`))
+      diff = Math.floor((diff/1000)/60)
+      if(diff > 5){
+        notifs_.push(value)
+      }
+    })
+    return notifs_
+  }
+
+  const Item = ({item}) => (
+      <List.Item
+        title={item.message}
+        description={item.created_at}
+        left={props => <List.Icon {...props} icon="alert"/>}
+      />
+  );
+
+  return (
     <View>
-      <Text>{userToken}</Text>
+      <FlatList
+        data={data()}
+        renderItem={Item}
+        keyExtractor={item => item.id}
+      />
     </View>
   )
 }
 
-function Pending({route, navigation}) {
-
-  const userToken = route.params.userToken
-
-//---------------------------- States ----------------------------//
-
-  // Refresh state
-  const [refreshing, setRefreshing] = useState(false);
-  const onRefresh = React.useCallback(() => {
-    setPassText("")
-    setRefreshing(true);
-    getNotifs().then(() => setRefreshing(false));
-  }, []);
-
-  // Loading state
-  const [isLoading, setLoading] = useState(false);
-
-  // Data state
-  const [data, setData] = useState([]);
-  const pendingNotifs = () => {
-    let notifs_ = []
-    data.forEach((value) => {
-      let diff = (Date.now() - new Date(`${value.created_at}`))
-      diff = Math.floor((diff/1000)/60)
-      if(diff <= 15){
-        notifs_.push(value)
-      }
-    })
-    return notifs_
-  }
-  const historyNotifs = () => {
-    let notifs_ = []
-    data.forEach((value) => {
-      let diff = (Date.now() - new Date(`${value.created_at}`))
-      diff = Math.floor((diff/1000)/60)
-      if(diff > 15){
-        notifs_.push(value)
-      }
-    })
-    return notifs_
-  }
+function Pending({navigation, route}) {
 
   // Authentication state
   const [modalVisible, setModalVisible] = useState(false);
@@ -90,91 +118,58 @@ function Pending({route, navigation}) {
   // Selected notification token
   const [currentToken, setCurrentToken] = useState();
 
-//---------------------------- Coroutines ----------------------------//
+  React.useEffect(() => {
+      console.log("pending change")
+    },
+    [route.params.data]
+  )
 
-  // Retrieve notifications
-  const getNotifs = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(
-        `${baseUrl}/notifications`,
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`
-          }
-        }
-      )
-      setData(response.data.reverse())
-    } catch (error) {
-      console.error(error)
-      navigation.navigate("SignIn")
-    } finally {
-      setLoading(false);
-    }
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', (e) => {
+      console.log('pending focus')
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  const data = () => {
+    let notifs_ = []
+    route.params.data.forEach((value) => {
+      let diff = (Date.now() - new Date(`${value.created_at}`))
+      diff = Math.floor((diff/1000)/60)
+      if(diff <= 5){
+        notifs_.push(value)
+      }
+    })
+    return notifs_
   }
 
-  useEffect(() => {
-    getNotifs();
-  }, []);
-
-//---------------------------- Renders ----------------------------//
-
-  // Notification list item
-  const PendingItem = ({item}) => (
-    <TouchableRipple onPress={() => {
-      setCurrentToken(item)
-      showModal()
-    }}>
-      <List.Item
-        title={item.message}
-        description={item.created_at}
-        left={props => <List.Icon {...props} icon="alert"/>}
-      />
-    </TouchableRipple>
-  );
-  const HistoryItem = ({item}) => (
+  const Item = ({item}) => (
+    <TouchableRipple
+      onPress={() => {
+        setCurrentToken(item.token)
+        showModal()
+      }}
+    >
     <List.Item
       title={item.message}
       description={item.created_at}
+      left={props => <List.Icon {...props} icon="alert"/>}
     />
+    </TouchableRipple>
   );
-
-  React.useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <IconButton icon="refresh" onPress={() => {navigation.navigate({name: "Home", params: {item: userToken}})}} />
-      ),
-    });
-  }, [navigation]);
 
   return (
     <Provider>
-      {isLoading ? <ActivityIndicator/> : (
-        <List.Section>
-          { pendingNotifs().length > 0 ? (
-            <List.Subheader>Pending Notifications</List.Subheader>
-          ) : (
-            <List.Item title="No pending notifications"/>
-          ) }
-          <FlatList
-            data={pendingNotifs()}
-            renderItem={PendingItem}
-            keyExtractor={item => item.id}/>
-
-          <List.Subheader>History</List.Subheader>
-          <FlatList
-            data={historyNotifs()}
-            renderItem={HistoryItem}
-            keyExtractor={item => item.id}
-          />
-
-        </List.Section>
-      )}
+      <FlatList
+        data={data()}
+        renderItem={Item}
+        keyExtractor={item => item.id}
+      />
       <Portal>
         <Modal
           visible={modalVisible}
           onDismiss={() => {
-            onRefresh()
             hideModal()
           }}
           contentContainerStyle={{backgroundColor: 'white', padding: 20, margin: 20}}
@@ -189,27 +184,33 @@ function Pending({route, navigation}) {
           <Button
             mode="contained"
             onPress={() => {
+              console.log("attempting auth:")
+              console.log("route.params.userToken: " + route.params.userToken)
+              console.log("passText: " + passText)
+              console.log("currentToken: " + currentToken)
+
               axios.post(
                 `${baseUrl}/authenticate-token`,
                 {
                   password: `${passText}`,
-                  token: `${currentToken.token}`,
+                  token: `${currentToken}`,
                 },
                 {
                   headers: {
-                    Authorization: `Bearer ${userToken}`,
+                    Authorization: `Bearer ${route.params.userToken}`,
                   }
                 }
               ).then( // If successful
                 function (response) {
-                  onRefresh()
-                  hideModal()
+
                 }
               ).catch( // If fails
                 function (error) {
                   console.log(error)
                 }
               )
+              setPassText("")
+              hideModal()
             }}
           >
             Confirm
@@ -223,15 +224,110 @@ function Pending({route, navigation}) {
 // Home Screen
 function Home({route, navigation}) {
 
-  // User's token
-  const userToken = route.params.item
+  console.log("home")
+
+  const [data, setData] = useState([]);
+
+  React.useEffect(() => {
+      navigation.addListener('beforeRemove', (e) => {
+        // Prevent default behavior of leaving the screen
+        e.preventDefault();
+        // Prompt the user before leaving the screen
+        Alert.alert(
+          "Sign Out",
+          "Are you sure you want to sign out?",
+          [
+            {
+              text: "No",
+              onPress: () => console.log("Cancel Pressed"),
+            },
+            { text: "Yes",
+              onPress: () => navigation.dispatch(e.data.action) }
+          ]
+        )
+      })
+    },
+    [navigation]
+  );
+
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <IconButton onPress={() => navigation.goBack()} icon="logout" color="#000" />
+      ),
+      headerRight: () => (
+        <View style={ {flexDirection: 'row'}}>
+          <IconButton
+            icon="refresh"
+            onPress={() => {
+              console.log("refresh")
+              getNotifs(route.params.userToken).then( r => {
+                  navigation.dispatch(
+                    CommonActions.reset({
+                      routes: [
+                        {
+                          name: 'Pending',
+                          params: {userToken: route.params.userToken, data: r},
+                        },
+                        {
+                          name: 'History',
+                          params: {userToken: route.params.userToken, data: r},
+                        },
+                      ],
+                    })
+                  )
+                }
+              )
+            }}
+          />
+          <IconButton icon="plus" onPress={() => {
+            axios.post(
+              `${baseUrl}/create-token`,
+              {
+                plate: `${testPlate}`
+              }
+            ).then(
+              function (response) {
+                console.log("created token")
+              }
+            ).catch(
+              function (error) {
+                console.log(error)
+              }
+            )
+          }}/>
+        </View>
+      ),
+    });
+  }, [navigation]);
+
 
   const Tab = createMaterialTopTabNavigator();
 
   return(
-    <Tab.Navigator>
-      <Tab.Screen name="Pending" component={Pending} initialParams={{userToken: userToken}} />
-      <Tab.Screen name="History" component={History} initialParams={{userToken: userToken}}/>
+    <Tab.Navigator
+      screenOptions={{
+        tabBarIndicatorStyle: { backgroundColor: '#6200EE' },
+      }}
+    >
+      <Tab.Screen
+        name="Pending"
+        component={Pending}
+        screenOptions={{
+          unmountOnBlur: true,
+          lazy: false
+        }}
+        initialParams={{userToken: route.params.userToken, data: route.params.data}}
+      />
+      <Tab.Screen
+        name="History"
+        component={History}
+        screenOptions={{
+          unmountOnBlur: true,
+          lazy: false
+        }}
+        initialParams={{userToken: route.params.userToken, data: route.params.data}}
+      />
     </Tab.Navigator>
   )
 
@@ -239,8 +335,8 @@ function Home({route, navigation}) {
 
 // Signin Screen
 function SignIn({ navigation }) {
-  const [emailText, setEmailText] = useState('miguelleirosa@gmail.com');
-  const [passText, setPassText] = useState('migascl');
+  const [emailText, setEmailText] = useState('');
+  const [passText, setPassText] = useState('');
 
   const [errorMsg, setErrorMsg] = useState('');
   const [snackVisible, setSnackVisible] = useState(false);
@@ -281,7 +377,9 @@ function SignIn({ navigation }) {
               }
             ).then( // If successful
               function (response) {
-                navigation.navigate({name: "Home", params: {item: response.data.token.token}})
+                getNotifs(response.data.token.token).then( r =>
+                  navigation.navigate({name: "Home", params: {userToken: response.data.token.token, data: r}})
+                )
                 setLoading(false)
               }
             ).catch( // If fails
@@ -338,14 +436,25 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name="SignIn" component={SignIn} options={{ title: 'Plate Recognizer' }}/>
+        <Stack.Screen
+          name="SignIn"
+          component={SignIn}
+          options={{
+            title: 'Plate Recognizer',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+              color: '#6200EE',
+            },
+          }}
+        />
         <Stack.Screen
           name="Home"
           component={Home}
-          options={{
+          options={() => ({
             title: "Notifications",
-            headerShadowVisible: false
-        }}/>
+            headerShadowVisible: false,
+          })}
+        />
       </Stack.Navigator>
       <StatusBar style="auto"/>
     </NavigationContainer>
