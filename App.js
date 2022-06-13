@@ -38,8 +38,6 @@ import axios from "axios";
 const baseUrl = 'https://plate-notifications.herokuapp.com' // Notification API URL
 
 // Prefilled variables for testing
-const testEmail = ''
-const testPassword = ''
 const testPlate = 'H391DVSA'
 
 function refreshHome({navigation, route}) {
