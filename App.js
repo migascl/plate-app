@@ -390,6 +390,8 @@ function SignIn({ navigation }) {
                   })
                 )
                 setLoading(false)
+                setEmailText("")
+                setPassText("")
               }
             ).catch( // If fails
               function (error) {
