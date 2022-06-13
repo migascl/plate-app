@@ -1,16 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
   NavigationContainer,
-  useFocusEffect,
   CommonActions,
-  getFocusedRouteNameFromRoute,
-  useNavigationState,
-  useRoute
 } from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import {
-  RefreshControl,
   View,
   Text,
   FlatList,
@@ -26,7 +21,6 @@ import {
   Snackbar,
   List,
   TouchableRipple,
-  ActivityIndicator,
   Modal,
   IconButton,
   Dialog,
@@ -36,9 +30,6 @@ import { StatusBar } from 'expo-status-bar';
 import axios from "axios";
 
 const baseUrl = 'https://plate-notifications.herokuapp.com' // Notification API URL
-
-// Prefilled variables for testing
-const testPlate = 'H391DVSA'
 
 function refreshHome({navigation, route}) {
   getNotifs(route.params.userToken).then( r => {
@@ -291,22 +282,6 @@ function Home({route, navigation}) {
               refreshHome({navigation, route})
             }}
           />
-          <IconButton icon="plus" onPress={() => {
-            axios.post(
-              `${baseUrl}/create-token`,
-              {
-                plate: `${testPlate}`
-              }
-            ).then(
-              function (response) {
-                console.log("created token")
-              }
-            ).catch(
-              function (error) {
-                console.log(error)
-              }
-            )
-          }}/>
         </View>
       ),
     });
