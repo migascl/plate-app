@@ -31,6 +31,7 @@ import axios from "axios";
 
 const baseUrl = 'https://plate-notifications.herokuapp.com' // Notification API URL
 
+// Refresh home
 function refreshHome({navigation, route}) {
   getNotifs(route.params.userToken).then( r => {
     navigation.dispatch(
@@ -50,9 +51,9 @@ function refreshHome({navigation, route}) {
   })
 }
 
+// Get notifications
 const getNotifs = async (userToken) => {
   try {
-    console.log("try fetch")
     const response = await axios.get(
       `${baseUrl}/notifications`,
       {
@@ -64,13 +65,13 @@ const getNotifs = async (userToken) => {
     return(response.data.reverse())
   } catch (error) {
     console.error(error)
-  } finally {
-    console.log("finally fetch")
   }
 }
 
+// History notifications tab
 function History({route, navigation}) {
 
+  // Return 
   const data = () => {
     let notifs_ = []
     route.params.data.forEach((value) => {
@@ -83,6 +84,7 @@ function History({route, navigation}) {
     return notifs_
   }
 
+  // List item
   const Item = ({item}) => (
       <List.Item
         title={`License plate ${item.message}`}
@@ -90,6 +92,7 @@ function History({route, navigation}) {
       />
   );
 
+  // Render
   return (
     <View>
       <FlatList
@@ -101,19 +104,21 @@ function History({route, navigation}) {
   )
 }
 
+
+// Pending notifications tab
 function Pending({navigation, route}) {
 
-  const [errorMsg, setErrorMsg] = useState(''); // Snack message state
+  // Snack states
+  const [snackMsg, setSnackMsg] = useState(''); // Snack message state
   const [snackVisible, setSnackVisible] = useState(false); // Snack visibility state
-  const onToggleSnackBar = () => setSnackVisible(!snackVisible); // OnToggleSnack function
-  const onDismissSnackBar = () => setSnackVisible(false); // OnDismissSnack function
+  const onToggleSnackBar = () => setSnackVisible(!snackVisible); // Snack toggle function
+  const onDismissSnackBar = () => setSnackVisible(false); // Function when snack dismissed
 
-  // Authentication state
-  const [modalVisible, setModalVisible] = useState(false);
-  const showModal = () => setModalVisible(true);
-  const hideModal = () => setModalVisible(false);
-  // Password field state
-  const [passText, setPassText] = useState('');
+  // Authentication modal state
+  const [modalVisible, setModalVisible] = useState(false); // Modal visibility state
+  const showModal = () => setModalVisible(true); // Show modal function
+  const hideModal = () => setModalVisible(false); // Hide modal function
+  const [passText, setPassText] = useState(''); // Password field state
 
   // Selected notification token
   const [currentToken, setCurrentToken] = useState([]);
@@ -216,7 +221,7 @@ function Pending({navigation, route}) {
                 ).catch( // If fails
                   function (error) {
                     console.log(error)
-                    setErrorMsg(`An error has occurred. (Error code: ${error.response.status})`)
+                    setSnackMsg(`An error has occurred. (Error code: ${error.response.status})`)
                     onToggleSnackBar()
                   }
                 )
@@ -232,10 +237,10 @@ function Pending({navigation, route}) {
           visible={snackVisible}
           onDismiss={() => {
             onDismissSnackBar()
-            setErrorMsg("")
+            setSnackMsg("")
           }}
         >
-          {errorMsg}
+          {snackMsg}
         </Snackbar>
       </Portal>
     </Provider>
@@ -244,8 +249,6 @@ function Pending({navigation, route}) {
 
 // Home Screen
 function Home({route, navigation}) {
-
-  console.log("home")
 
   React.useEffect(() => {
       navigation.addListener('beforeRemove', (e) => {
@@ -258,7 +261,7 @@ function Home({route, navigation}) {
           [
             {
               text: "No",
-              onPress: () => console.log("Cancel Pressed"),
+              onPress: () => console.log("cancel pressed"),
             },
             { text: "Yes",
               onPress: () => navigation.dispatch(e.data.action) }
@@ -272,15 +275,16 @@ function Home({route, navigation}) {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
-        <IconButton onPress={() => navigation.goBack()} icon="logout" color="#000" />
+        <IconButton 
+          icon="logout"
+          onPress={() => navigation.goBack()} 
+        />
       ),
       headerRight: () => (
         <View style={ {flexDirection: 'row'}}>
           <IconButton
             icon="refresh"
-            onPress={() => {
-              refreshHome({navigation, route})
-            }}
+            onPress={() => refreshHome({navigation, route})}
           />
         </View>
       ),
@@ -327,7 +331,7 @@ function SignIn({ navigation }) {
   const [emailText, setEmailText] = useState(''); // Email field state
   const [passText, setPassText] = useState(''); // Password field state
 
-  const [errorMsg, setErrorMsg] = useState(''); // Snack message state
+  const [snackMsg, setSnackMsg] = useState(''); // Snack message state
   const [snackVisible, setSnackVisible] = useState(false); // Snack visibility state
   const onToggleSnackBar = () => setSnackVisible(!snackVisible); // OnToggleSnack function
   const onDismissSnackBar = () => setSnackVisible(false); // OnDismissSnack function
@@ -396,7 +400,7 @@ function SignIn({ navigation }) {
             ).catch( // If fails
               function (error) {
                 console.log(error)
-                setErrorMsg(`An error has occurred, check your credentials. \n(Error code: ${error.response.status})`)
+                setSnackMsg(`An error has occurred, check your credentials. \n(Error code: ${error.response.status})`)
                 onToggleSnackBar()
                 setLoading(false)
               }
@@ -417,10 +421,10 @@ function SignIn({ navigation }) {
         visible={snackVisible}
         onDismiss={() => {
           onDismissSnackBar()
-          setErrorMsg("")
+          setSnackMsg("")
         }}
       >
-        {errorMsg}
+        {snackMsg}
       </Snackbar>
       <Provider>
         <Portal>
@@ -442,7 +446,7 @@ function SignIn({ navigation }) {
   );
 }
 
-// Base
+// Init app
 export default function App() {
 
   const Stack = createNativeStackNavigator();
